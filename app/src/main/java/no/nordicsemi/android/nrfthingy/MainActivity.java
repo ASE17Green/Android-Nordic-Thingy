@@ -60,6 +60,7 @@ import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.tech.NfcF;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -92,9 +93,19 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import no.nordicsemi.android.nrfthingy.common.AboutActivity;
 import no.nordicsemi.android.nrfthingy.common.DismissNfcWarningDialogFragment;
@@ -188,6 +199,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private ImageView mBatteryLevelImg;
     private NFCTagFoundDialogFragment mNfcTagFoundDialogFragment;
 
+
     public MainActivity() {
     }
 
@@ -231,26 +243,34 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         @Override
         public void onTemperatureValueChangedEvent(BluetoothDevice bluetoothDevice, String temperature) {
-
+            Log.i("Temperature", ""+Thread.currentThread().getId());
+            currSensorData.put("temperature", temperature);
+            uploadData();
         }
 
         @Override
         public void onPressureValueChangedEvent(BluetoothDevice bluetoothDevice, String pressure) {
+            Log.i("Pressure", ""+Thread.currentThread().getId());
+            currSensorData.put("pressure", pressure);
+
 
         }
 
         @Override
         public void onHumidityValueChangedEvent(BluetoothDevice bluetoothDevice, String humidity) {
+            Log.i("Humidity", ""+Thread.currentThread().getId());
 
         }
 
         @Override
         public void onAirQualityValueChangedEvent(BluetoothDevice bluetoothDevice, final int eco2, final int tvoc) {
+            Log.i("AirQuality", ""+Thread.currentThread().getId());
 
         }
 
         @Override
         public void onColorIntensityValueChangedEvent(BluetoothDevice bluetoothDevice, float red, float green, float blue, float alpha) {
+            Log.i("ColorIntensity", ""+Thread.currentThread().getId());
 
         }
 
@@ -330,12 +350,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         @Override
         public void onHeadingValueChangedEvent(final BluetoothDevice bluetoothDevice, final float heading) {
-
+            currSensorData.put("heading",""+heading);
         }
 
         @Override
         public void onGravityVectorChangedEvent(final BluetoothDevice bluetoothDevice, final float x, final float y, final float z) {
-
         }
 
         @Override
@@ -348,6 +367,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         }
     };
+
+
 
     private void updateBatteryLevelVisibility(final int visibility) {
         mBatteryLevel.setVisibility(visibility);
@@ -1962,6 +1983,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 break;
             default:
                 enableEnvironmentNotifications();
+                mThingySdkManager.enableHeadingNotifications(mDevice,true);
+
                 break;
         }
     }
@@ -2001,5 +2024,88 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     public void onNfcWarningDismissed() {
         mNfcContainer.setVisibility(View.GONE);
+    }
+
+
+    /*
+    *
+    *   GATEWAY
+    *
+    */
+
+    private HashMap<String, String> currSensorData = new HashMap<String, String>();
+
+
+    public synchronized void updateCurrSensorData(String key, String value){
+        currSensorData.put(key, value);
+    }
+
+    // todo: implementing deep copy!
+    public synchronized HashMap<String, String> getCurrSensorData(){
+        return new HashMap<String, String>(currSensorData);
+    }
+
+    public void uploadData() {
+        MainActivity.CloudTask cloudTask = new MainActivity.CloudTask();
+        cloudTask.execute();
+    }
+    public class CloudTask extends AsyncTask<Void, Void, Void> {
+        private final String jsonString;
+        private JSONObject jsontosend;
+
+        public CloudTask() {
+            jsontosend = new JSONObject();
+            try {
+                HashMap<String, String> currData = getCurrSensorData();
+                for (Map.Entry<String, String> entry : currData.entrySet()) {
+                    jsontosend.put(entry.getKey(), entry.getValue());
+                }
+            } catch (JSONException e) {
+
+            }
+
+            this.jsonString = jsontosend.toString();
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+
+            try {
+
+                URL myUrl = new URL("https://murmuring-chamber-74508.herokuapp.com/test");
+                Log.i("UploadData", ""+Thread.currentThread().getId());
+
+                HttpURLConnection connection = (HttpURLConnection)myUrl
+                        .openConnection();
+                // set connection output to true
+                connection.setDoOutput(true);
+                // instead of a GET, we're going to send using method="POST"
+                connection.setRequestMethod("POST");
+                connection.setRequestProperty("Content-Type", "application/json");
+                OutputStreamWriter writer = new OutputStreamWriter(
+                        connection.getOutputStream());
+
+                writer.write(jsonString);
+
+                writer.close();
+
+                // I don't know why yet, but this is needed...
+                if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                    Log.i("Success","");//  // if there is a response code AND that response code is 200 OK
+                } else {
+                    Log.i("Failure","");
+
+                    // Server returned HTTP error code.
+                }
+
+            } catch (MalformedURLException e) {
+                // ...
+            } catch (IOException e) {
+                // ...
+            }
+
+            return null;
+
+        }
     }
 }

@@ -46,6 +46,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
@@ -58,6 +59,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.util.Log;
+
 
 import com.getkeepsafe.taptargetview.TapTarget;
 import com.getkeepsafe.taptargetview.TapTargetSequence;
@@ -73,11 +76,27 @@ import com.github.mikephil.charting.formatter.YAxisValueFormatter;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.github.mikephil.charting.utils.ViewPortHandler;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.io.OutputStreamWriter;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.io.DataOutputStream;
 
 import no.nordicsemi.android.nrfthingy.common.ScannerFragmentListener;
 import no.nordicsemi.android.nrfthingy.common.Utils;
@@ -91,6 +110,10 @@ import no.nordicsemi.android.thingylib.ThingySdkManager;
 import no.nordicsemi.android.thingylib.utils.ThingyUtils;
 
 public class EnvironmentServiceFragment extends Fragment implements ScannerFragmentListener, EnvironmentServiceSettingsFragment.EnvironmentServiceSettingsFragmentListener {
+
+    private static final int TEMPERATURE_UPDATE_EVENT = 0;
+    private static final int PRESSURE_UPDATE_EVENT = 1;
+    private static final int BUTTON_STATE_UPDATE_EVENT = 2;
 
     private static final int REQUEST_ENABLE_BT = 1021;
     private TextView mTemperatureView;
@@ -152,12 +175,16 @@ public class EnvironmentServiceFragment extends Fragment implements ScannerFragm
 
         }
 
+
         @Override
         public void onTemperatureValueChangedEvent(BluetoothDevice bluetoothDevice, String temperature) {
             mTemperature = temperature;
             mTemperatureTimeStamp = ThingyUtils.TIME_FORMAT.format(System.currentTimeMillis());
             if (mIsFragmentAttached) {
                 mTemperatureView.setText(String.format(Locale.US, getString(R.string.celcius), temperature));
+
+               // uploadData(TEMPERATURE_UPDATE_EVENT, temperature);
+
                 handleTemperatureGraphUpdates(mLineChartTemperature);
                 addTemperatureEntry(mTemperatureTimeStamp, Float.valueOf(mTemperature));
             }
@@ -179,7 +206,7 @@ public class EnvironmentServiceFragment extends Fragment implements ScannerFragm
             mHumidity = humidity;
             mHumidityTimeStamp = ThingyUtils.TIME_FORMAT.format(System.currentTimeMillis());
             if (mIsFragmentAttached) {
-                mHumidityView.setText(mHumidity + "%");
+                mHumidityView.setText("10" + "%");
                 handleTemperatureGraphUpdates(mLineChartHumidity);
                 addHumidityEntry(mHumidityTimeStamp, Float.parseFloat(mHumidity));
             }
@@ -189,6 +216,7 @@ public class EnvironmentServiceFragment extends Fragment implements ScannerFragm
         public void onAirQualityValueChangedEvent(BluetoothDevice bluetoothDevice, final int eco2, final int tvoc) {
             mECO2 = eco2;
             mTVOC = tvoc;
+
             if (mIsFragmentAttached) {
                 mCarbon.setText(getString(R.string.ppm, mECO2));
                 mTvoc.setText(getString(R.string.ppb, mTVOC));
@@ -209,7 +237,7 @@ public class EnvironmentServiceFragment extends Fragment implements ScannerFragm
 
         @Override
         public void onButtonStateChangedEvent(BluetoothDevice bluetoothDevice, int buttonState) {
-
+            uploadData(0, ""+buttonState);
         }
 
         @Override
@@ -259,7 +287,6 @@ public class EnvironmentServiceFragment extends Fragment implements ScannerFragm
 
         @Override
         public void onHeadingValueChangedEvent(BluetoothDevice bluetoothDevice, float heading) {
-
         }
 
         @Override
@@ -376,6 +403,7 @@ public class EnvironmentServiceFragment extends Fragment implements ScannerFragm
                                 item.setChecked(true);
                                 mDatabaseHelper.updateNotificationsState(mDevice.getAddress(), item.isChecked(), ThingyDbColumns.COLUMN_NOTIFICATION_TEMPERATURE);
                                 mThingySdkManager.enableTemperatureNotifications(mDevice, item.isChecked());
+                                //mThingySdkManager.enableGravityVectorNotifications(mDevice, item.isChecked());
                                 mTemperatureView.setText("");
                             }
                             break;
@@ -717,7 +745,7 @@ public class EnvironmentServiceFragment extends Fragment implements ScannerFragm
 
             if (temperatureValue > leftAxis.getAxisMaximum()) {
                 leftAxis.setAxisMaxValue(leftAxis.getAxisMaximum() + 20f);
-            } else if(temperatureValue < leftAxis.getAxisMinimum()) {
+            } else if (temperatureValue < leftAxis.getAxisMinimum()) {
                 leftAxis.setAxisMinValue(leftAxis.getAxisMinimum() - 20f);
             }
 
@@ -1086,6 +1114,98 @@ public class EnvironmentServiceFragment extends Fragment implements ScannerFragm
 
                 }
             }).start();
+        }
+    }
+
+    private void writeStream(final OutputStream outputStream, final String jsonData) {
+        try {
+            outputStream.write(jsonData.getBytes());
+            outputStream.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                outputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public String createTemperatureJson(final String value) {
+        final JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put("value1", mDatabaseHelper.getDeviceName(mDevice.getAddress()));
+            jsonObject.put("value2", value);
+            jsonObject.put("value3", "\u2103");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return jsonObject.toString();
+
+    }
+
+    public void uploadData(final int eventType, final String jsonData) {
+        EnvironmentServiceFragment.CloudTask cloudTask = new CloudTask(eventType, jsonData);
+        cloudTask.execute();
+    }
+    public class CloudTask extends AsyncTask<Void, Void, Void> {
+        private static final String TEMPERATURE_BASE_URL = "https://maker.ifttt.com/trigger/temperature_update/with/key/";
+        private static final String PRESSURE_BASE_URL = "https://maker.ifttt.com/trigger/pressure_update/with/key/";
+        private static final String BUTTON_STATE_BASE_URL = "https://maker.ifttt.com/trigger/button_press/with/key/";
+        private static final String TEST_URL = "https://murmuring-chamber-74508.herokuapp.com/test";
+        private final String json;
+        private String temperature = null;
+        private final int eventType;
+
+        public CloudTask(final int eventType, final String json) {
+            this.eventType = eventType;
+            this.json = json;
+            this.temperature = json;
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+
+
+                try {
+                    //Create a URL object holding our url
+                    URL myUrl = new URL("https://murmuring-chamber-74508.herokuapp.com/test");
+
+                    HttpURLConnection connection = (HttpURLConnection)myUrl
+                            .openConnection();
+                    // set connection output to true
+                    connection.setDoOutput(true);
+                    // instead of a GET, we're going to send using method="POST"
+                    connection.setRequestMethod("POST");
+                    connection.setRequestProperty("Content-Type", "application/json");
+                    OutputStreamWriter writer = new OutputStreamWriter(
+                            connection.getOutputStream());
+
+                    writer.write("{\n" + "\"temperature\" :" + temperature +"}");//write data to the connection. This is data that you are sending
+                    // to the server
+
+
+                    writer.close();        // Closes this output stream and releases any system resources
+
+
+                    // I don't know why yet, but this is needed...
+                    if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                        Log.i("Success","");//  // if there is a response code AND that response code is 200 OK
+                    } else {
+                        Log.i("Failure","");
+
+                        // Server returned HTTP error code.
+                    }
+
+                } catch (MalformedURLException e) {
+                    // ...
+                } catch (IOException e) {
+                    // ...
+                }
+
+            return null;
+
         }
     }
 }
