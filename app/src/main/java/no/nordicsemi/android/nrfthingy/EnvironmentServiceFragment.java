@@ -206,7 +206,7 @@ public class EnvironmentServiceFragment extends Fragment implements ScannerFragm
             mHumidity = humidity;
             mHumidityTimeStamp = ThingyUtils.TIME_FORMAT.format(System.currentTimeMillis());
             if (mIsFragmentAttached) {
-                mHumidityView.setText("10" + "%");
+                mHumidityView.setText(mHumidity + "%");
                 handleTemperatureGraphUpdates(mLineChartHumidity);
                 addHumidityEntry(mHumidityTimeStamp, Float.parseFloat(mHumidity));
             }
@@ -1117,42 +1117,13 @@ public class EnvironmentServiceFragment extends Fragment implements ScannerFragm
         }
     }
 
-    private void writeStream(final OutputStream outputStream, final String jsonData) {
-        try {
-            outputStream.write(jsonData.getBytes());
-            outputStream.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                outputStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    public String createTemperatureJson(final String value) {
-        final JSONObject jsonObject = new JSONObject();
-        try {
-            jsonObject.put("value1", mDatabaseHelper.getDeviceName(mDevice.getAddress()));
-            jsonObject.put("value2", value);
-            jsonObject.put("value3", "\u2103");
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        return jsonObject.toString();
-
-    }
 
     public void uploadData(final int eventType, final String jsonData) {
         EnvironmentServiceFragment.CloudTask cloudTask = new CloudTask(eventType, jsonData);
         cloudTask.execute();
     }
     public class CloudTask extends AsyncTask<Void, Void, Void> {
-        private static final String TEMPERATURE_BASE_URL = "https://maker.ifttt.com/trigger/temperature_update/with/key/";
-        private static final String PRESSURE_BASE_URL = "https://maker.ifttt.com/trigger/pressure_update/with/key/";
-        private static final String BUTTON_STATE_BASE_URL = "https://maker.ifttt.com/trigger/button_press/with/key/";
+
         private static final String TEST_URL = "https://murmuring-chamber-74508.herokuapp.com/test";
         private final String json;
         private String temperature = null;
