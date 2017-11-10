@@ -52,6 +52,8 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
+import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
@@ -136,6 +138,7 @@ import no.nordicsemi.android.thingylib.ThingySdkManager;
 import no.nordicsemi.android.thingylib.utils.ThingyUtils;
 
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener,
+        LocationListener,
         EnvironmentServiceFragment.EnvironmentServiceListener,
         UiFragment.UIFragmetnListener,
         MotionServiceFragment.MotionFragmentListener,
@@ -199,6 +202,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private ImageView mBatteryLevelImg;
     private NFCTagFoundDialogFragment mNfcTagFoundDialogFragment;
 
+    // Location
+    private LocationManager locationManager;
+    private LocationListener locationListener;
 
     public MainActivity() {
     }
@@ -243,118 +249,110 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         @Override
         public void onTemperatureValueChangedEvent(BluetoothDevice bluetoothDevice, String temperature) {
-            Log.i("Temperature", ""+Thread.currentThread().getId());
-            currSensorData.put("temperature", temperature);
+            updateCurrSensorData("temperature", temperature);
             uploadData();
         }
 
         @Override
         public void onPressureValueChangedEvent(BluetoothDevice bluetoothDevice, String pressure) {
-            Log.i("Pressure", ""+Thread.currentThread().getId());
-            currSensorData.put("pressure", pressure);
+            updateCurrSensorData("pressure", pressure);
 
 
         }
 
         @Override
         public void onHumidityValueChangedEvent(BluetoothDevice bluetoothDevice, String humidity) {
-            Log.i("Humidity", ""+Thread.currentThread().getId());
-
+            updateCurrSensorData("humidity", humidity);
         }
 
         @Override
         public void onAirQualityValueChangedEvent(BluetoothDevice bluetoothDevice, final int eco2, final int tvoc) {
-            Log.i("AirQuality", ""+Thread.currentThread().getId());
-
+            updateCurrSensorData("eco2", "" + eco2);
+            updateCurrSensorData("tvoc", "" + tvoc);
         }
 
         @Override
         public void onColorIntensityValueChangedEvent(BluetoothDevice bluetoothDevice, float red, float green, float blue, float alpha) {
-            Log.i("ColorIntensity", ""+Thread.currentThread().getId());
-
+            updateCurrSensorData("colorRed", "" + red);
+            updateCurrSensorData("colorGreen", "" + green);
+            updateCurrSensorData("colorBlue", "" + blue);
+            updateCurrSensorData("colorAlpha", "" + alpha);
         }
 
         @Override
         public void onButtonStateChangedEvent(BluetoothDevice bluetoothDevice, final int buttonState) {
-            if (bluetoothDevice.equals(mDevice)) {
-                switch (buttonState) {
-                    case 0:
-                        if(mRingtone != null) {
-                            if(mRingtone.isPlaying()) {
-                                mRingtone.stop();
-                            }
-                            mRingtone = null;
-                        }
-
-                        break;
-                    case 1:
-                        Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                        if(notification != null) {
-                            mRingtone = RingtoneManager.getRingtone(getApplicationContext(), notification);
-                            if(mRingtone != null) {
-                                mRingtone.play();
-                            }
-                        }
-                        break;
-                    default:
-                        break;
-                }
-
-            }
+            updateCurrSensorData("button", "" + buttonState);
         }
 
         @Override
         public void onTapValueChangedEvent(final BluetoothDevice bluetoothDevice, final int direction, final int count) {
-
+            updateCurrSensorData("tapDirection", "" + direction);
+            updateCurrSensorData("tapCount", "" + count);
         }
 
         @Override
         public void onOrientationValueChangedEvent(final BluetoothDevice bluetoothDevice, final int orientation) {
-
+            updateCurrSensorData("orientation", "" + orientation);
         }
 
         @Override
         public void onQuaternionValueChangedEvent(final BluetoothDevice bluetoothDevice, float w, float x, float y, float z) {
-
+            updateCurrSensorData("quaternionW", "" + w);
+            updateCurrSensorData("quaternionX", "" + x);
+            updateCurrSensorData("quaternionY", "" + y);
+            updateCurrSensorData("quaternionZ", "" + z);
         }
 
         @Override
         public void onPedometerValueChangedEvent(final BluetoothDevice bluetoothDevice, final int steps, final long duration) {
-
+            updateCurrSensorData("pedometerSteps", "" + steps);
+            updateCurrSensorData("pedometerDuration", "" + duration);
         }
 
         @Override
         public void onAccelerometerValueChangedEvent(final BluetoothDevice bluetoothDevice, final float x, final float y, final float z) {
-
+            updateCurrSensorData("accelerometerX", "" + x);
+            updateCurrSensorData("accelerometerY", "" + y);
+            updateCurrSensorData("accelerometerZ", "" + z);
         }
 
         @Override
         public void onGyroscopeValueChangedEvent(final BluetoothDevice bluetoothDevice, final float x, final float y, final float z) {
-
+            updateCurrSensorData("gyroscopeX", "" + x);
+            updateCurrSensorData("gyroscopeY", "" + y);
+            updateCurrSensorData("gyroscopeZ", "" + z);
         }
 
         @Override
         public void onCompassValueChangedEvent(final BluetoothDevice bluetoothDevice, final float x, final float y, final float z) {
-
+            updateCurrSensorData("compassX", "" + x);
+            updateCurrSensorData("compassY", "" + y);
+            updateCurrSensorData("compassZ", "" + z);
         }
 
         @Override
         public void onEulerAngleChangedEvent(final BluetoothDevice bluetoothDevice, final float roll, final float pitch, final float yaw) {
-
+            updateCurrSensorData("eulerRoll", "" + roll);
+            updateCurrSensorData("eulerPitch", "" + pitch);
+            updateCurrSensorData("eulerYaw", "" + yaw);
         }
 
         @Override
+        //todo: checking matrix and introduce a way to check rotation on api
         public void onRotationMatixValueChangedEvent(final BluetoothDevice bluetoothDevice, final byte[] matrix) {
 
         }
 
         @Override
         public void onHeadingValueChangedEvent(final BluetoothDevice bluetoothDevice, final float heading) {
-            currSensorData.put("heading",""+heading);
+            updateCurrSensorData("heading",""+heading);
         }
 
         @Override
         public void onGravityVectorChangedEvent(final BluetoothDevice bluetoothDevice, final float x, final float y, final float z) {
+            updateCurrSensorData("gravityX", "" + x);
+            updateCurrSensorData("gravityY", "" + y);
+            updateCurrSensorData("gravityZ", "" + z);
         }
 
         @Override
@@ -531,6 +529,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             mProgressDialog = (ProgressDialogFragment) getSupportFragmentManager().findFragmentByTag(Utils.PROGRESS_DIALOG_TAG);
             mNfcTagFoundDialogFragment = (NFCTagFoundDialogFragment) getSupportFragmentManager().findFragmentByTag(Utils.NFC_DIALOG_TAG);
         }
+
+        // Location
+        ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        // ToDo: add handler if Permission is not granted
+        if(checkLocationPermission()){
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+        }
+
     }
 
     private void registerNfcBroadcastReceiver() {
@@ -544,6 +551,34 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             unregisterReceiver(mNfcAdapterStateChangedReceiver);
         }
     }
+
+    // Location Start
+    public boolean checkLocationPermission()
+    {
+        String permission = "android.permission.ACCESS_FINE_LOCATION";
+        int res = this.checkCallingOrSelfPermission(permission);
+        return (res == PackageManager.PERMISSION_GRANTED);
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        updateCurrSensorData("Latitude", "" + location.getLatitude());
+        updateCurrSensorData("Longitude", "" + location.getLongitude());
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+    }
+    // Location End
+
 
     @Override
     protected void onNewIntent(final Intent intent) {
@@ -1982,9 +2017,21 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 enableNotificationsForCloudUpload();
                 break;
             default:
+                /*
+                    Enabling all Notifications to send
+                */
                 enableEnvironmentNotifications();
+                //enableMotionNotifications() not enough, requires DB currently
+                // todo: improve this solution. maybe a checklist ?
                 mThingySdkManager.enableHeadingNotifications(mDevice,true);
-
+                mThingySdkManager.enableEulerNotifications(mDevice,true);
+                mThingySdkManager.enableGravityVectorNotifications(mDevice, true);
+                mThingySdkManager.enableOrientationNotifications(mDevice, true);
+                mThingySdkManager.enablePedometerNotifications(mDevice, true);
+                mThingySdkManager.enableQuaternionNotifications(mDevice, true);
+                mThingySdkManager.enableTapNotifications(mDevice, true);
+                // RawData: Accelerometer, Gyroscope, Compass
+                mThingySdkManager.enableRawDataNotifications(mDevice, true);
                 break;
         }
     }
