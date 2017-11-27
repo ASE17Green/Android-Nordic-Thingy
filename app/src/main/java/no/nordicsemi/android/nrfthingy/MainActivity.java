@@ -2032,6 +2032,46 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 mThingySdkManager.enableTapNotifications(mDevice, true);
                 // RawData: Accelerometer, Gyroscope, Compass
                 mThingySdkManager.enableRawDataNotifications(mDevice, true);
+                // todo: improve this solution...
+                updateCurrSensorData("thingyID", mDevice.getAddress());
+
+                updateCurrSensorData("pressure", "null");
+                updateCurrSensorData("humidity", "null");
+                updateCurrSensorData("eco2", "" + "null");
+                updateCurrSensorData("tvoc", "" + "null");
+                updateCurrSensorData("colorRed", "" + "null");
+                updateCurrSensorData("colorGreen", "" + "null");
+                updateCurrSensorData("colorBlue", "" + "null");
+                updateCurrSensorData("colorAlpha", "" + "null");
+                updateCurrSensorData("button", "" + "null");
+                updateCurrSensorData("tapDirection", "" + "null");
+                updateCurrSensorData("tapCount", "" + "null");
+                updateCurrSensorData("orientation", "" + "null");
+                updateCurrSensorData("quaternionW", "" + "null");
+                updateCurrSensorData("quaternionX", "" + "null");
+                updateCurrSensorData("quaternionY", "" + "null");
+                updateCurrSensorData("quaternionZ", "" + "null");
+                updateCurrSensorData("pedometerSteps", "" + "null");
+                updateCurrSensorData("pedometerDuration", "" + "null");
+                updateCurrSensorData("accelerometerX", "" + "null");
+                updateCurrSensorData("accelerometerY", "" + "null");
+                updateCurrSensorData("accelerometerZ", "" + "null");
+                updateCurrSensorData("gyroscopeX", "" + "null");
+                updateCurrSensorData("gyroscopeY", "" + "null");
+                updateCurrSensorData("gyroscopeZ", "" + "null");
+                updateCurrSensorData("compassX", "" + "null");
+                updateCurrSensorData("compassY", "" + "null");
+                updateCurrSensorData("compassZ", "" + "null");
+                updateCurrSensorData("eulerRoll", "" + "null");
+                updateCurrSensorData("eulerPitch", "" + "null");
+                updateCurrSensorData("eulerYaw", "" + "null");
+                updateCurrSensorData("heading",""+"null");
+                updateCurrSensorData("gravityX", "" + "null");
+                updateCurrSensorData("gravityY", "" + "null");
+                updateCurrSensorData("gravityZ", "" + "null");
+                updateCurrSensorData("Latitude", "" + "null");
+                updateCurrSensorData("Longitude", "" + "null");
+
                 break;
         }
     }
@@ -2081,15 +2121,32 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     */
 
     private HashMap<String, String> currSensorData = new HashMap<String, String>();
+    private HashMap<String, String> currEnvData = new HashMap<String, String>();
+    private HashMap<String, String> currMotionData = new HashMap<String, String>();
 
 
     public synchronized void updateCurrSensorData(String key, String value){
         currSensorData.put(key, value);
     }
 
-    // todo: implementing deep copy!
+    public synchronized void updateCurrEnvData(String key, String value){
+        currMotionData.put(key, value);
+    }
+
+    public synchronized void updateCurrMotionData(String key, String value){
+        currEnvData.put(key, value);
+    }
+
     public synchronized HashMap<String, String> getCurrSensorData(){
         return new HashMap<String, String>(currSensorData);
+    }
+
+    public synchronized HashMap<String, String> getCurrEnvData(){
+        return new HashMap<String, String>(currEnvData);
+    }
+
+    public synchronized HashMap<String, String> getCurrMotionData(){
+        return new HashMap<String, String>(currMotionData);
     }
 
     public void uploadData() {
@@ -2118,25 +2175,20 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         protected Void doInBackground(Void... params) {
 
             try {
-
-                URL myUrl = new URL("https://murmuring-chamber-74508.herokuapp.com/test");
-                Log.i("UploadData", ""+Thread.currentThread().getId());
+                URL myUrl = new URL("http://51.15.143.42:3300/user/thingy/adddata");
 
                 HttpURLConnection connection = (HttpURLConnection)myUrl
                         .openConnection();
-                // set connection output to true
                 connection.setDoOutput(true);
-                // instead of a GET, we're going to send using method="POST"
                 connection.setRequestMethod("POST");
                 connection.setRequestProperty("Content-Type", "application/json");
                 OutputStreamWriter writer = new OutputStreamWriter(
                         connection.getOutputStream());
-
                 writer.write(jsonString);
 
                 writer.close();
 
-                // I don't know why yet, but this is needed...
+                // Todo: I don't know why yet, but this is needed... else post is not sent..
                 if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
                     Log.i("Success","");//  // if there is a response code AND that response code is 200 OK
                 } else {
@@ -2146,7 +2198,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 }
 
             } catch (MalformedURLException e) {
-                // ...
+                Log.v("URLExc", e.toString());
             } catch (IOException e) {
                 // ...
             }
