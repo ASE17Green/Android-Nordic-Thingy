@@ -2175,6 +2175,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         protected Void doInBackground(Void... params) {
 
             try {
+                String token = "JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7Il9pZCI6IjVhMTViZGJhZmVlOWRmMDAwZjgwZWQ1YSIsImVtYWlsIjoia2V2aW5rZXZpbiIsInBhc3N3b3JkIjoiJDJhJDEwJDVtQzVad3d2WFZQUWhiRzBoaFNPUS5JWDlDTE1ZYXAzbmU5N1NVM3lrVnZpaDJXQW92NkJLIiwiX192IjowLCJlbmRMb2NhdGlvbnMiOltdLCJ0aGluZ3lzVGVtcGVyYXR1cmVNZXNzYWdlU2VudCI6W10sInRoaW5neXNNYXhUZW1wZXJhdHVyZSI6W10sInRoaW5neXNNaW5UZW1wZXJhdHVyZSI6W10sInRoaW5neXNJRCI6W119LCJpYXQiOjE1MTE3ODY3NjQsImV4cCI6MTUxMjM5MTU2NH0.QIDiduICL00HIY96KkyrinSXAjBY8DaT687caEgnt1g";
                 URL myUrl = new URL("http://51.15.143.42:3300/user/thingy/adddata");
 
                 HttpURLConnection connection = (HttpURLConnection)myUrl
@@ -2182,6 +2183,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 connection.setDoOutput(true);
                 connection.setRequestMethod("POST");
                 connection.setRequestProperty("Content-Type", "application/json");
+                connection.setRequestProperty("Authorization", token);
                 OutputStreamWriter writer = new OutputStreamWriter(
                         connection.getOutputStream());
                 writer.write(jsonString);
