@@ -104,6 +104,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -205,6 +206,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     // Location
     private LocationManager locationManager;
     private LocationListener locationListener;
+    // todo : its only 99% perfect ;)
+    private double longitude1 = 987654321;
+    private double latitude1 = 987654321;
+    private float velocity;
+
+    private int tempUpdates;
 
     public MainActivity() {
     }
@@ -250,7 +257,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         @Override
         public void onTemperatureValueChangedEvent(BluetoothDevice bluetoothDevice, String temperature) {
             updateCurrSensorData("temperature", temperature);
-            uploadData();
+            if(tempUpdates < 3){
+                tempUpdates++;
+            } else {
+                uploadData();
+            }
         }
 
         @Override
@@ -297,16 +308,20 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         @Override
         public void onQuaternionValueChangedEvent(final BluetoothDevice bluetoothDevice, float w, float x, float y, float z) {
+            /*
             updateCurrSensorData("quaternionW", "" + w);
             updateCurrSensorData("quaternionX", "" + x);
             updateCurrSensorData("quaternionY", "" + y);
             updateCurrSensorData("quaternionZ", "" + z);
+            */
         }
 
         @Override
         public void onPedometerValueChangedEvent(final BluetoothDevice bluetoothDevice, final int steps, final long duration) {
+            /*
             updateCurrSensorData("pedometerSteps", "" + steps);
             updateCurrSensorData("pedometerDuration", "" + duration);
+            */
         }
 
         @Override
@@ -318,23 +333,29 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         @Override
         public void onGyroscopeValueChangedEvent(final BluetoothDevice bluetoothDevice, final float x, final float y, final float z) {
+            /*
             updateCurrSensorData("gyroscopeX", "" + x);
             updateCurrSensorData("gyroscopeY", "" + y);
             updateCurrSensorData("gyroscopeZ", "" + z);
+            */
         }
 
         @Override
         public void onCompassValueChangedEvent(final BluetoothDevice bluetoothDevice, final float x, final float y, final float z) {
+            /*
             updateCurrSensorData("compassX", "" + x);
             updateCurrSensorData("compassY", "" + y);
             updateCurrSensorData("compassZ", "" + z);
+            */
         }
 
         @Override
         public void onEulerAngleChangedEvent(final BluetoothDevice bluetoothDevice, final float roll, final float pitch, final float yaw) {
+            /*
             updateCurrSensorData("eulerRoll", "" + roll);
             updateCurrSensorData("eulerPitch", "" + pitch);
             updateCurrSensorData("eulerYaw", "" + yaw);
+            */
         }
 
         @Override
@@ -345,14 +366,16 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         @Override
         public void onHeadingValueChangedEvent(final BluetoothDevice bluetoothDevice, final float heading) {
-            updateCurrSensorData("heading",""+heading);
+            //updateCurrSensorData("heading",""+heading);
         }
 
         @Override
         public void onGravityVectorChangedEvent(final BluetoothDevice bluetoothDevice, final float x, final float y, final float z) {
+            /*
             updateCurrSensorData("gravityX", "" + x);
             updateCurrSensorData("gravityY", "" + y);
             updateCurrSensorData("gravityZ", "" + z);
+            */
         }
 
         @Override
@@ -562,8 +585,19 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     @Override
     public void onLocationChanged(Location location) {
-        updateCurrSensorData("Latitude", "" + location.getLatitude());
-        updateCurrSensorData("Longitude", "" + location.getLongitude());
+        Log.v("location Event", "onLocationChanged triggered");
+        // todo : velocity could be implemented somehow somewhat somewhere better ;)
+        if(longitude1 != 987654321 && latitude1 != 987654321) {
+            velocity = calculateVelocity((float) latitude1, (float) longitude1, (float) location.getLatitude(), (float) location.getLongitude());
+        }
+        else{
+            velocity = 0;
+        }
+        updateCurrSensorData("velocity", "" + velocity);
+        updateCurrSensorData("latitude", "" + location.getLatitude());
+        updateCurrSensorData("longitude", "" + location.getLongitude());
+        latitude1 = location.getLatitude();
+        longitude1 = location.getLongitude();
     }
 
     @Override
@@ -2023,20 +2057,21 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 enableEnvironmentNotifications();
                 //enableMotionNotifications() not enough, requires DB currently
                 // todo: improve this solution. maybe a checklist ?
-                mThingySdkManager.enableHeadingNotifications(mDevice,true);
-                mThingySdkManager.enableEulerNotifications(mDevice,true);
-                mThingySdkManager.enableGravityVectorNotifications(mDevice, true);
+               // mThingySdkManager.enableHeadingNotifications(mDevice,true);
+               // mThingySdkManager.enableEulerNotifications(mDevice,true);
+               // mThingySdkManager.enableGravityVectorNotifications(mDevice, true);
                 mThingySdkManager.enableOrientationNotifications(mDevice, true);
-                mThingySdkManager.enablePedometerNotifications(mDevice, true);
-                mThingySdkManager.enableQuaternionNotifications(mDevice, true);
+               // mThingySdkManager.enablePedometerNotifications(mDevice, true);
+               // mThingySdkManager.enableQuaternionNotifications(mDevice, true);
                 mThingySdkManager.enableTapNotifications(mDevice, true);
                 // RawData: Accelerometer, Gyroscope, Compass
                 mThingySdkManager.enableRawDataNotifications(mDevice, true);
                 // todo: improve this solution...
                 updateCurrSensorData("thingyID", mDevice.getAddress());
-
-                updateCurrSensorData("pressure", "null");
-                updateCurrSensorData("humidity", "null");
+/*
+                updateCurrSensorData("temperature", "0");
+                updateCurrSensorData("pressure", "0");
+                updateCurrSensorData("humidity", "0");
                 updateCurrSensorData("eco2", "" + "null");
                 updateCurrSensorData("tvoc", "" + "null");
                 updateCurrSensorData("colorRed", "" + "null");
@@ -2053,6 +2088,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 updateCurrSensorData("quaternionZ", "" + "null");
                 updateCurrSensorData("pedometerSteps", "" + "null");
                 updateCurrSensorData("pedometerDuration", "" + "null");
+
                 updateCurrSensorData("accelerometerX", "" + "null");
                 updateCurrSensorData("accelerometerY", "" + "null");
                 updateCurrSensorData("accelerometerZ", "" + "null");
@@ -2069,9 +2105,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 updateCurrSensorData("gravityX", "" + "null");
                 updateCurrSensorData("gravityY", "" + "null");
                 updateCurrSensorData("gravityZ", "" + "null");
-                updateCurrSensorData("Latitude", "" + "null");
-                updateCurrSensorData("Longitude", "" + "null");
 
+                updateCurrSensorData("latitude", "" + "null");
+                updateCurrSensorData("longitude", "" + "null");
+*/
                 break;
         }
     }
@@ -2124,6 +2161,18 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private HashMap<String, String> currEnvData = new HashMap<String, String>();
     private HashMap<String, String> currMotionData = new HashMap<String, String>();
 
+    public static float calculateVelocity(float lat1, float lng1, float lat2, float lng2) {
+        double earthRadius = 6371000; //meters
+        double dLat = Math.toRadians(lat2-lat1);
+        double dLng = Math.toRadians(lng2-lng1);
+        double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                        Math.sin(dLng/2) * Math.sin(dLng/2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        float dist = (float) (earthRadius * c);
+
+        return dist;
+    }
 
     public synchronized void updateCurrSensorData(String key, String value){
         currSensorData.put(key, value);
@@ -2167,8 +2216,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             } catch (JSONException e) {
 
             }
-
             this.jsonString = jsontosend.toString();
+            Log.v("full json :",jsonString);
         }
 
         @Override
@@ -2183,7 +2232,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 connection.setDoOutput(true);
                 connection.setRequestMethod("POST");
                 connection.setRequestProperty("Content-Type", "application/json");
-                connection.setRequestProperty("Authorization", token);
+                //connection.setRequestProperty("Authorization", token);
                 OutputStreamWriter writer = new OutputStreamWriter(
                         connection.getOutputStream());
                 writer.write(jsonString);
